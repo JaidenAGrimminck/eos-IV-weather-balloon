@@ -2,10 +2,13 @@
 const settings = {
     skipGPSFrames: true,
     //angleSpan: 2.5,
-    textColor: "#7CFC00", 
+    textColor: "#7CFC00",
     alternateColor: "#c1fc00",
-    graphColors: ["lawngreen", "lawngreen", "lawngreen"],
+    graphColors: ["#ff0000", "#00ff00", "#0000ff"],
     showHitboxes: false,
+    maxZoom: 20,
+    minZoom: 1,
+    connectedLines: true,
 }
 const dataInfo = {
     frame: {
@@ -98,6 +101,18 @@ const dataInfo = {
         colors: [settings.textColor],
         data: ["humidity"]
     },
+    upward_speed: {
+        label: "Upward speed (m/s)",
+        range: [-15, 5],
+        colors: [settings.textColor],
+        data: ["upward_speed"]
+    },
+    avg_upward_speed: {
+        label: "Average upward speed (m/s)",
+        range: [-15, 5],
+        colors: [settings.textColor],
+        data: ["avg_upward_speed"]
+    },
 }
 const hitboxes = {
     x_axis: [300, 370, 220, 20],
@@ -117,6 +132,9 @@ const hitboxes = {
     mag_xyz: [10, 275, 210, 22],
     pressure: [10, 297, 210, 22],
     humidity: [10, 319, 210, 22],
+    upward_speed: [10, 341, 210, 22],
+    avg_upward_speed: [10, 363, 210, 22],
+    graph: [250, 50, 340, 310],
 }
 let DATA = [];
 let values = [];
@@ -124,6 +142,7 @@ let colors = [];
 let dataLoaded = false;
 let sliderClicked = false;
 let frameSlider;
+let watermark = false;
 let selectedAxes = ["altitude", "thermistor_c"];
 let selected = "none";
 function cmap(v, index=0) {
@@ -178,6 +197,8 @@ let camera = function( sketch ) {
         //     let angle = mangetometerToStuff(DATA[index].mag_x, DATA[index].mag_y, DATA[index].mag_z);
         //     sketch.line(300, 300, 300+100*Math.cos(angle), 300+100*Math.sin(angle));
         // }
+        sketch.fill(settings.textColor + "88");
+        watermark&&sketch.text("Created by Sean Kuwamoto", 320, 20);
     }
 
     sketch.keyPressed = function() {
@@ -211,9 +232,16 @@ let camera = function( sketch ) {
 };
 let p5one = new p5(camera);
 
+
+const controls = {
+    view: {x: 0, y: 0, zoom: 1},
+    viewPos: {prevX: null, prevY: null, isDragging: false},
+}
 let info = function( sketch ) {
     sketch.setup = function() {
         let cnv = sketch.createCanvas(640, 480);
+        cnv.mouseWheel(e => detectHover(sketch, hitboxes.graph)&&Controls.zoom(controls).worldZoom(e));
+        cnv.id("info-canvas");
         cnv.parent('info-holder');
         sketch.background(30);
         sketch.textSize(24);
@@ -224,6 +252,29 @@ let info = function( sketch ) {
         sketch.background(30);
         sketch.fill(255);
         sketch.noStroke();  
+
+        // Graph predraw
+        sketch.noFill()
+        for (let line = 0; line < Math.max(dataInfo[selectedAxes[0]].data.length, dataInfo[selectedAxes[1]].data.length); line++) {
+            sketch.stroke(dataInfo[selectedAxes[1]].colors[line % dataInfo[selectedAxes[1]].colors.length]);
+            settings.connectedLines&&sketch.beginShape();
+            for (let i = 0; i < index; i++) {
+                sketch.strokeWeight(1);
+                let [px, py] = transform(
+                    250 + inverseLerp(selectedAxes[0], i, line)*(590 - 250),
+                    360 + inverseLerp(selectedAxes[1], i, line)*(50 - 360)
+                );
+                settings.connectedLines?sketch.vertex(px, py):sketch.point(px, py);
+            }
+            settings.connectedLines&&sketch.endShape();
+        }
+        sketch.noStroke();
+        // Covering rectangles
+        sketch.fill(30);
+        sketch.rect(0, 0, 250, 480);
+        sketch.rect(250, 360, 390, 120);
+        sketch.rect(0, 0, 640, 50);
+        sketch.rect(590, 50, 50, 310);
 
         // Hover detector
         let hovered;
@@ -272,7 +323,11 @@ let info = function( sketch ) {
         sketch.fill(hovered==="pressure"?settings.alternateColor:settings.textColor);
         sketch.text("pressure: " + (dataLoaded?DATA[index].pressure:"0"), 10, 310);
         sketch.fill(hovered==="humidity"?settings.alternateColor:settings.textColor);
-        sketch.text("humidity: " + (dataLoaded?DATA[index].humidity:"0"), 10, 333);
+        sketch.text("humidity: " + (dataLoaded?DATA[index].humidity:"0"), 10, 332);
+        sketch.fill(hovered==="upward_speed"?settings.alternateColor:settings.textColor);
+        sketch.text("upward speed: " + (dataLoaded?Math.round(10*DATA[index].upward_speed)/10:"0"), 10, 355);
+        sketch.fill(hovered==="avg_upward_speed"?settings.alternateColor:settings.textColor);
+        sketch.text("avg upward speed: " + (dataLoaded?Math.round(10*DATA[index].avg_upward_speed)/10:"0"), 10, 378);
 
         function drawtext( x, y, text_array ) {
             let pos_x = x;
@@ -342,6 +397,12 @@ let info = function( sketch ) {
         sketch.textSize(18);
         sketch.fill(settings.textColor);
         sketch.text(dataInfo[selectedAxes[1]].label + " vs. " + dataInfo[selectedAxes[0]].label, 440, 40);
+        let cnvRect = document.getElementById('info-canvas').getBoundingClientRect();
+        // sketch.text("Zoom: " + controls.view.zoom.toFixed(2) + " Translate: " + 
+        // ((controls.view.x - hitboxes.graph[0])/controls.view.zoom + hitboxes.graph[0])
+        //  + ", " + 
+        // ((controls.view.y - hitboxes.graph[1])/controls.view.zoom+ hitboxes.graph[1]), 440, 70);
+        // sketch.text("Real:" + controls.view.x + ", " + controls.view.y, 440, 100);
 
         sketch.stroke(settings.textColor);
         sketch.fill(settings.textColor);
@@ -363,7 +424,7 @@ let info = function( sketch ) {
 
         // Hitboxes
         if (settings.showHitboxes) {
-            for (let [key, value] of Object.entries(hitboxes)) {
+            for (let [_, value] of Object.entries(hitboxes)) {
                 sketch.rect(...value);
             }
         }
@@ -375,8 +436,10 @@ let info = function( sketch ) {
         sketch.textAlign(sketch.CENTER, sketch.TOP);
         sketch.textSize(14);
         sketch.fill(settings.textColor);
-        sketch.text(dataInfo[selectedAxes[0]].range[1], 590, 380);
-        sketch.text(dataInfo[selectedAxes[0]].range[0], 250, 380);
+        let xMax = lerp(selectedAxes[0], 1/controls.view.zoom - (((controls.view.x - hitboxes.graph[0])/controls.view.zoom + hitboxes.graph[0]))/hitboxes.graph[2]);
+        let xMin = lerp(selectedAxes[0], -(((controls.view.x - hitboxes.graph[0])/controls.view.zoom + hitboxes.graph[0]))/hitboxes.graph[2]);
+        sketch.text(selectedAxes[0]==="time"?xMax:Math.round(xMax*100)/100, 590, 380);
+        sketch.text(selectedAxes[0]==="time"?xMin:Math.round(xMin*100)/100, 250, 380);
         
         // left line
         sketch.line(240, 50, 260, 50);
@@ -384,23 +447,59 @@ let info = function( sketch ) {
         sketch.textAlign(sketch.RIGHT, sketch.CENTER);
         sketch.textSize(14);
         sketch.fill(settings.textColor);
-        sketch.text(dataInfo[selectedAxes[1]].range[1], 230, 50);
-        sketch.text(dataInfo[selectedAxes[1]].range[0], 230, 360);
+        let yMax = lerp(selectedAxes[1], 1 - (-((controls.view.y - hitboxes.graph[1])/controls.view.zoom + hitboxes.graph[1])/hitboxes.graph[3]));
+        let yMin = lerp(selectedAxes[1], 1 - (1/controls.view.zoom - (((controls.view.y - hitboxes.graph[1])/controls.view.zoom + hitboxes.graph[1]))/hitboxes.graph[3]));
+        sketch.text(selectedAxes[1]==="time"?yMax:Math.round(yMax*100)/100, 230, 50);
+        sketch.text(selectedAxes[1]==="time"?yMin:Math.round(yMin*100)/100, 230, 360);
         sketch.textSize(18);
         
+        // Gridlines
+        // sketch.stroke(settings.textColor + "60");
+        // for(let i = 0; i <= 10; i++) {
+        //     sketch.line(...transform(250 + 34*i, 360), ...transform(250 + 34*i, 50));
+        //     sketch.line(...transform(250, 360 - 31*i), ...transform(590, 360 - 31*i));
+        // }
+
         
         // actual graph
+        // sketch.translate(controls.view.x, controls.view.y);
+        // sketch.scale(controls.view.zoom);
         sketch.noFill();
         for (let line = 0; line < Math.max(dataInfo[selectedAxes[0]].data.length, dataInfo[selectedAxes[1]].data.length); line++) {
             sketch.stroke(dataInfo[selectedAxes[1]].colors[line % dataInfo[selectedAxes[1]].colors.length]);
-            // sketch.beginShape();
-            for (let i = 0; i < index; i++) {
-                sketch.strokeWeight(2);
-                sketch.point(250 + lerper(selectedAxes[0], i, line)*(590 - 250), 360 + lerper(selectedAxes[1], i, line)*(50 - 360));
+
+            // Zero lines
+            if (selectedAxes[0] !== "time") 
+            {
+                let xZero = 250 +((0 - dataInfo[selectedAxes[0]].range[0])/(dataInfo[selectedAxes[0]].range[1] - dataInfo[selectedAxes[0]].range[0]))*(590-250);
+                let transformed = controls.view.x + (controls.view.zoom * xZero);
+                if (!(transformed <= 250 || transformed >= 590)) {
+                    sketch.line(transformed, 50, transformed, 370);
+                    sketch.textSize(14);
+                    sketch.fill(settings.textColor);
+                    sketch.text(0, transformed, 380);
+                    sketch.noFill();
+                    sketch.textSize(18);
+                }
             }
-            // sketch.endShape();
+            if (selectedAxes[1] !== "time") {
+                let yZero = 360 + ((0 - dataInfo[selectedAxes[1]].range[0])/(dataInfo[selectedAxes[1]].range[1] - dataInfo[selectedAxes[1]].range[0]))*(50-360);
+                let transformed = controls.view.y + (controls.view.zoom * yZero);
+                if (!(transformed <= 50 || transformed >= 360)) {
+                    sketch.line(240, transformed, 590, transformed);
+                    sketch.textSize(14);
+                    sketch.fill(settings.textColor);
+                    sketch.text(0, 230, transformed);
+                    sketch.noFill();
+                    sketch.textSize(18);
+                }
+
+            }
+            
         }
         sketch.noStroke();
+
+
         sketch.fill(hovered==="y_axis"||selected==="y_axis"?settings.alternateColor:settings.textColor);
 
         sketch.textAlign(sketch.CENTER, sketch.BOTTOM);
@@ -409,9 +508,14 @@ let info = function( sketch ) {
 
     }
 
-    sketch.mousePressed = function() {
+    sketch.mousePressed = function(e) {
+        detectHover(sketch, hitboxes.graph)&&Controls.move(controls).mousePressed(e);
         for (let [key, value] of Object.entries(hitboxes)) {
             if (detectHover(sketch, value)) {
+                if (key === "graph") {
+                    selected = "none";
+                    return;
+                }
                 if (key === "x_axis") {
                     selected = "x_axis";
                     return;
@@ -428,8 +532,112 @@ let info = function( sketch ) {
         }
         selected = "none";
     }
+    sketch.mouseDragged = function(e) {
+        detectHover(sketch, hitboxes.graph)&&Controls.move(controls).mouseDragged(e);
+    }
+    sketch.mouseReleased = function(e) {
+        detectHover(sketch, hitboxes.graph)&&Controls.move(controls).mouseReleased(e);
+    }
 };
 let p5two = new p5(info);
+
+function transform(x, y) {
+    return [
+        controls.view.x + (controls.view.zoom * x),
+        controls.view.y + (controls.view.zoom * y)
+    ];
+}
+
+function clampTranslations() {
+    function deconvert(x, y) {
+        return [
+            controls.view.zoom * (x - hitboxes.graph[0]) + hitboxes.graph[0],
+            controls.view.zoom * (y - hitboxes.graph[1]) + hitboxes.graph[1]
+        ];
+    }
+    let [maxX, maxY] = deconvert(0, 0);
+    let [minX, minY] = deconvert(-hitboxes.graph[2] * (controls.view.zoom - 1)/(controls.view.zoom), -hitboxes.graph[3] * (controls.view.zoom - 1)/(controls.view.zoom));
+
+    if (controls.view.x < minX) {
+        controls.view.x = minX
+    }
+    else if (controls.view.x > maxX) {
+        controls.view.x = maxX;
+    }
+    else if(controls.view.y < minY) {
+        controls.view.y = minY
+    }
+    else if (controls.view.y > maxY) {
+        controls.view.y = maxY;
+    }
+    return;
+    
+}
+class Controls {
+    static move(controls) {
+      function mousePressed(e) {
+        controls.viewPos.isDragging = true;
+        controls.viewPos.prevX = e.clientX;
+        controls.viewPos.prevY = e.clientY;
+      }
+  
+      function mouseDragged(e) {
+        const {prevX, prevY, isDragging} = controls.viewPos;
+        if(!isDragging) return;
+        const pos = {x: e.clientX, y: e.clientY};
+        const dx = pos.x - prevX;
+        const dy = pos.y - prevY;        
+        if(prevX || prevY) {  
+            controls.view.x += dx;
+            controls.view.y += dy;
+            clampTranslations();
+            controls.viewPos.prevX = pos.x, controls.viewPos.prevY = pos.y
+        }
+      }
+  
+      function mouseReleased(e) {
+        controls.viewPos.isDragging = false;
+        controls.viewPos.prevX = null;
+        controls.viewPos.prevY = null;
+      }
+   
+      return {
+        mousePressed, 
+        mouseDragged, 
+        mouseReleased
+      }
+    }
+  
+    static zoom(controls) {
+      function worldZoom(e) {
+        let {x, y, deltaY} = e;
+        const factor = 0.003;
+        let zoom = -1 * deltaY * factor;
+        if (controls.view.zoom + zoom > settings.maxZoom) {
+            zoom = settings.maxZoom - controls.view.zoom;
+        }
+        if (controls.view.zoom + zoom < settings.minZoom) {
+            zoom = settings.minZoom - controls.view.zoom;
+        }
+  
+        
+        x = x - document.getElementById('info-canvas').getBoundingClientRect().left;
+        y = y - document.getElementById('info-canvas').getBoundingClientRect().top;
+        
+        const wx = (x-controls.view.x)/(controls.view.zoom);
+        const wy = (y-controls.view.y)/(controls.view.zoom);
+
+        
+        controls.view.x -= wx*zoom;
+        controls.view.y -= wy*zoom;
+        clampTranslations();
+        controls.view.zoom += zoom;
+        
+      }
+  
+      return {worldZoom}
+    }
+}
 
 function updateInfo(i) {
     if (!dataLoaded) return;
@@ -458,6 +666,13 @@ window.onrecieve = (data) => {
         if (data.data === "KAIEVAN") {
             document.getElementById('title').innerHTML = "Dusk Balloon Data - Kai Spada & Evan Kuo";
             dataInfo.time.range = ["15:37:13:0", "20:11:52:0"]
+            watermark = true;
+            return;
+        }
+        if (data.data === "BAKER") {
+            document.getElementById('title').innerHTML = "Dawn Balloon Data - Baker Simmons";
+            dataInfo.time.range  = ["13:37:00:0", "22:35:00:0"]
+            watermark = true;
             return;
         }
         console.error("You done messed up");
@@ -468,6 +683,7 @@ window.onrecieve = (data) => {
         return;
     }
     if (data.data.includes(null) || data.data.includes(undefined)) return;
+    console.log(data.data[0]);
     DATA = data.data;
     if (settings.skipGPSFrames) {
         DATA = DATA.filter(d => d.live_cam == 1);
@@ -488,7 +704,15 @@ window.onrecieve = (data) => {
     dataLoaded = true;
 }
 
-function lerper(dataType, frame, line) {
+function lerp(dataType, time) {
+    if (!dataLoaded) return 0;
+    if (dataType === "time") {
+        // console.log(UTC(milis(dataInfo[dataType].range[0]) + time * (milis(dataInfo[dataType].range[1]) - milis(dataInfo[dataType].range[0]))))
+        return UTC(milis(dataInfo[dataType].range[0]) + time * (milis(dataInfo[dataType].range[1]) - milis(dataInfo[dataType].range[0])));
+    }
+    return dataInfo[dataType].range[0] + time * (dataInfo[dataType].range[1] - dataInfo[dataType].range[0]);
+}
+function inverseLerp(dataType, frame, line) {
     if (!dataLoaded) return 0;
     if (dataType === "time") {
         return Math.min(Math.max((milis(DATA[frame][dataType]) - milis(dataInfo[dataType].range[0]))/(milis(dataInfo[dataType].range[1]) - milis(dataInfo[dataType].range[0])), 0), 1);
