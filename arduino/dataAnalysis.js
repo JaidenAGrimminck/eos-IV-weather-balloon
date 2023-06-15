@@ -7,10 +7,23 @@ const UPWARD_SPEED_SAMPLES = 100;
 /*
 Whose data to use.
 SEANJAIDEN: Sean and Jaiden's data -- Midnight balloon
+    - All data cuts out at ~11km altitude.
+    - Basic gps sensor data.
+    - Live, downward facing 32x24 IR camera data, updates once per second for 24 of every 30 seconds.
+    - External thermistor data.
+    - Gyroscope, accelerometer, and magnetometer data.
 KAIEVAN: Kaievan's data -- Dusk balloon
-BAKER: Baker's data -- Dawn balloon
+    - Data is complete. Little to no errors.
+    - Basic gps sensor data.
+    - Pressure data.
+    - Humidity data.
+    - 32x24 downward facing IR camera data, one frame every 10 seconds.
+BAKERMILO: Baker and Milo's data -- Dawn balloon
+    - Full flight data for some categories, partial for others.
+    - Basic gps sensor data. GPS cuts out at
+
 */
-const MODE = "BAKER";
+const MODE = "BAKERMILO";
 
 // Libraries
 const express = require('express');
@@ -82,7 +95,7 @@ function getData() {
         if (NUM_ROWS == 0) return e.slice(0, e.length - 1);
         else return e.slice(0, NUM_ROWS);
     }
-    else if (MODE === "BAKER") {
+    else if (MODE === "BAKERMILO") {
         let dat = fs.readFileSync('DAWN.csv', { encoding: 'utf8', flag: 'r' });
         let e = dat.split('\r\n').slice(3);
         if (NUM_ROWS == 0) return e.slice(0, e.length - 1);
@@ -173,7 +186,7 @@ for (let i = 0; i < DATA.length; i++) {
             mostRecentCameraData = cameraVals;
         }
     }
-    else if (MODE === "BAKER") {
+    else if (MODE === "BAKERMILO") {
         rowItems = row.split(',').map((x, i) => {
             // Date and time
             if (i == 0 || i == 1) return String(x);
