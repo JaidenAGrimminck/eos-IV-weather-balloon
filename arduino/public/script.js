@@ -15,108 +15,125 @@ const dataInfo = {
         label: "Current frame",
         range: [0, 16500],
         colors: [settings.textColor],
-        data: ["frame"]
+        data: ["frame"],
+        units: "frames"
     },
     time: {
         label: "Time (UTC)",
         range: ["13:39:11:0", "17:20:00:0"],
         colors: [settings.textColor],
-        data: ["time"]
+        data: ["time"],
+        units: "hh:mm:ss:ms"
     },
     ms_since_last_cycle: {
-        label: "Time since last cycle (ms)",
+        label: "Time since last cycle",
         range: [1000, 1050],
         colors: [settings.textColor],
-        data: ["ms_since_last_cycle"]
+        data: ["ms_since_last_cycle"],
+        units: "ms"
     },
     latitude: {
         label: "Latitude",
         range: [3910, 3940],
         colors: [settings.textColor],
-        data: ["latitude"]
+        data: ["latitude"],
+        units: "???"
     },
     longitude: {
         label: "Longitude",
         range: [12130, 12160],
         colors: [settings.textColor],
-        data: ["longitude"]
+        data: ["longitude"],
+        units: "???"
     },
     altitude: {
-        label: "Altitude (m)",
+        label: "Altitude",
         range: [0, 32200],
         colors: [settings.textColor],
-        data: ["altitude"]
+        data: ["altitude"],
+        units: "m"
     }, 
     speed: {
-        label: "Speed (km/h)",
+        label: "Speed",
         range: [0, 40],
         colors: [settings.textColor],
-        data: ["speed"]
+        data: ["speed"],
+        units: "km/h"
     },
     satellites: {
         label: "Number of Satellites",
         range: [0, 20],
         colors: [settings.textColor],
-        data: ["satellites"]
+        data: ["satellites"],
+        units: ""
     },
     avg_thermistor: {
-        label: "Average Thermistor Reading (Volts)",
+        label: "Average Thermistor Reading",
         range: [400, 1100],
         colors: [settings.textColor],
-        data: ["avg_thermistor"]
+        data: ["avg_thermistor"],
+        units: "V"
     },
     thermistor_c: {
-        label: "Temperature (ºC)",
+        label: "Temperature",
         range: [-60 , 20],
         colors: [settings.textColor],
-        data: ["thermistor_c"]
+        data: ["thermistor_c"],
+        units: "ºC"
     },
     gyro_xyz: {
-        label: "Gyroscope (º/s)",
+        label: "Gyroscope",
         range: [-0.3, 0.3],
         colors: settings.graphColors,
-        data: ["gyro_x", "gyro_y", "gyro_z"]
+        data: ["gyro_x", "gyro_y", "gyro_z"],
+        units: "º/s"
     },
     accel_xyz: {
-        label: "Accelerometer (g)",
+        label: "Accelerometer",
         range: [-1, 1],
         colors: settings.graphColors,
-        data: ["accel_x", "accel_y", "accel_z"]
+        data: ["accel_x", "accel_y", "accel_z"],
+        units: "m/s²"
     },
     mag_xyz: {
-        label: "Magnetometer (uT)",
+        label: "Magnetometer",
         range: [-50, 50],
         colors: settings.graphColors,
-        data: ["mag_x", "mag_y", "mag_z"]
+        data: ["mag_x", "mag_y", "mag_z"],
+        units: "uT"
     },
     pressure: {
-        label: "Pressure (hPa)",
+        label: "Pressure",
         range: [0, 1200],
         colors: [settings.textColor],
-        data: ["pressure"]
+        data: ["pressure"],
+        units: "hPa"
     },
     humidity: {
-        label: "Relative humidity (%)",
+        label: "Relative humidity",
         range: [0, 100],
         colors: [settings.textColor],
-        data: ["humidity"]
+        data: ["humidity"],
+        units: "%"
     },
     upward_speed: {
-        label: "Upward speed (m/s)",
+        label: "Upward speed",
         range: [-15, 5],
         colors: [settings.textColor],
-        data: ["upward_speed"]
+        data: ["upward_speed"],
+        units: "m/s"
     },
     avg_upward_speed: {
-        label: "Average upward speed (m/s)",
+        label: "Average upward speed",
         range: [-15, 5],
         colors: [settings.textColor],
-        data: ["avg_upward_speed"]
+        data: ["avg_upward_speed"],
+        units: "m/s"
     },
 }
 const hitboxes = {
-    x_axis: [300, 370, 220, 20],
-    y_axis: [220, 100, 20, 220],
+    x_axis: [300, 440, 220, 20],
+    y_axis: [220, 170, 20, 220],
     time: [10, 6, 100, 22],
     frame: [240, 8, 160, 20],
     ms_since_last_cycle: [10, 28, 210, 20],
@@ -134,7 +151,7 @@ const hitboxes = {
     humidity: [10, 319, 210, 22],
     upward_speed: [10, 341, 210, 22],
     avg_upward_speed: [10, 363, 210, 22],
-    graph: [250, 50, 340, 310],
+    graph: [270, 120, 340, 310],
 }
 let DATA = [];
 let values = [];
@@ -163,7 +180,7 @@ for (let i = 0; i < 32; i++) {
 }
 let camera = function( sketch ) {
     sketch.setup = function() {
-        let cnv = sketch.createCanvas(640, 480);
+        let cnv = sketch.createCanvas(640, 560);
         cnv.parent('sketch-holder');
         sketch.textSize(24);
         sketch.textAlign(sketch.CENTER, sketch.CENTER);
@@ -199,6 +216,21 @@ let camera = function( sketch ) {
         // }
         sketch.fill(settings.textColor + "88");
         watermark&&sketch.text("Created by Sean Kuwamoto", 320, 20);
+
+        // Color thing
+        sketch.textSize(24);
+        sketch.textAlign(sketch.CENTER, sketch.CENTER);
+        sketch.fill(255, 255, 255, 60);
+        // sketch.rect(0, 320, 160, 480);
+        sketch.rect(0, 480, 640, 80);
+        sketch.fill(cmap(0));
+        sketch.text(dataLoaded?Math.round(DATA[index].min_temp)+"º C":"-Infinity", 40, 520);
+        sketch.fill(cmap(1));
+        sketch.text(dataLoaded?Math.round(DATA[index].max_temp)+"º C":"Infinity", 600,520);
+        for(let i = 0; i < 255; i++) {
+            sketch.fill(cmap(i/255));
+            sketch.rect(80 + 460 * i/255, 490, 20, 60);
+        }
     }
 
     sketch.keyPressed = function() {
@@ -261,8 +293,8 @@ let info = function( sketch ) {
             for (let i = 0; i < index; i++) {
                 sketch.strokeWeight(1);
                 let [px, py] = transform(
-                    250 + inverseLerp(selectedAxes[0], i, line)*(590 - 250),
-                    360 + inverseLerp(selectedAxes[1], i, line)*(50 - 360)
+                    hitboxes.graph[0] + inverseLerp(selectedAxes[0], i, line)*hitboxes.graph[2],
+                    hitboxes.graph[1] + hitboxes.graph[3] - inverseLerp(selectedAxes[1], i, line)*hitboxes.graph[3],
                 );
                 settings.connectedLines?sketch.vertex(px, py):sketch.point(px, py);
             }
@@ -271,10 +303,10 @@ let info = function( sketch ) {
         sketch.noStroke();
         // Covering rectangles
         sketch.fill(30);
-        sketch.rect(0, 0, 250, 480);
-        sketch.rect(250, 360, 390, 120);
-        sketch.rect(0, 0, 640, 50);
-        sketch.rect(590, 50, 50, 310);
+        sketch.rect(0, 0, hitboxes.graph[0], 480);
+        sketch.rect(0, 0, 640, hitboxes.graph[1]);
+        sketch.rect(0, hitboxes.graph[1] + hitboxes.graph[3], 640, 480 - hitboxes.graph[1] - hitboxes.graph[3]);
+        sketch.rect(hitboxes.graph[0] + hitboxes.graph[2], 0, 640 - hitboxes.graph[0] - hitboxes.graph[2], 480);
 
         // Hover detector
         let hovered;
@@ -368,20 +400,7 @@ let info = function( sketch ) {
         // sketch.text("mag xyz: " + (dataLoaded?DATA[index].mag_x:"0") + " " + (dataLoaded?DATA[index].mag_y:"0") + " " + (dataLoaded?DATA[index].mag_z:"0"), 10, 288);
 
 
-        sketch.textSize(24);
-        sketch.textAlign(sketch.CENTER, sketch.CENTER);
-        sketch.fill(255, 255, 255, 60);
-        // sketch.rect(0, 320, 160, 480);
-        sketch.rect(160, 400, 640, 480);
-        sketch.fill(cmap(0));
-        sketch.text(dataLoaded?Math.round(DATA[index].min_temp)+"º C":"-Infinity", 200, 440);
-        sketch.fill(cmap(1));
-        sketch.text(dataLoaded?Math.round(DATA[index].max_temp)+"º C":"Infinity", 600, 440);
 
-        for(let i = 0; i < 255; i++) {
-            sketch.fill(cmap(i/255));
-            sketch.rect(240 + 300 * i/255, 410, 20, 60);
-        }
 
         // for (let i = -settings.angleSpan; i <= -settings.angleSpan + 2 * settings.angleSpan * clamp(((dataLoaded?DATA[index].thermistor_c:0) - dataInfo.thermistor_c.range[0])/(dataInfo.thermistor_c.range[1] - dataInfo.thermistor_c.range[0])); i+= 0.05) {
         //     sketch.fill(cmap(i/(2*settings.angleSpan) + 0.5, 1));
@@ -393,10 +412,10 @@ let info = function( sketch ) {
         // Graph
 
         // Title
-        sketch.textAlign(sketch.CENTER, sketch.TOP);
+        sketch.textAlign(sketch.CENTER, sketch.BOTTOM);
         sketch.textSize(18);
         sketch.fill(settings.textColor);
-        sketch.text(dataInfo[selectedAxes[1]].label + " vs. " + dataInfo[selectedAxes[0]].label, 440, 40);
+        sketch.text(dataInfo[selectedAxes[1]].label + " vs. " + dataInfo[selectedAxes[0]].label, hitboxes.graph[0] + hitboxes.graph[2]/2, hitboxes.graph[1] - 10);
         let cnvRect = document.getElementById('info-canvas').getBoundingClientRect();
         // sketch.text("Zoom: " + controls.view.zoom.toFixed(2) + " Translate: " + 
         // ((controls.view.x - hitboxes.graph[0])/controls.view.zoom + hitboxes.graph[0])
@@ -407,14 +426,14 @@ let info = function( sketch ) {
         sketch.stroke(settings.textColor);
         sketch.fill(settings.textColor);
         // left line
-        sketch.line(250, 360, 250, 50);
+        sketch.line(hitboxes.graph[0], hitboxes.graph[1], hitboxes.graph[0], hitboxes.graph[1] + hitboxes.graph[3]);
         // bottom line
-        sketch.line(250, 360, 590, 360);
+        sketch.line(hitboxes.graph[0], hitboxes.graph[1] + hitboxes.graph[3], hitboxes.graph[0] + hitboxes.graph[2], hitboxes.graph[1] + hitboxes.graph[3]);
         sketch.noStroke();
         sketch.textAlign(sketch.CENTER, sketch.TOP);
         sketch.textSize(18);
         sketch.fill(hovered==="x_axis"||selected==="x_axis"?settings.alternateColor:settings.textColor);
-        sketch.text(selected==="x_axis"?"Selecting...":dataInfo[selectedAxes[0]].label, 420, 370);
+        sketch.text(selected==="x_axis"?"Selecting...":dataInfo[selectedAxes[0]].label, hitboxes.graph[0] + hitboxes.graph[2]/2, hitboxes.graph[1] + hitboxes.graph[3] + 10);
         
 
         // Tickmarks
@@ -431,33 +450,33 @@ let info = function( sketch ) {
         
 
         // bottom line
-        sketch.line(590, 350, 590, 370);
-        sketch.line(250, 350, 250, 370);
+        sketch.line(hitboxes.graph[0] + hitboxes.graph[2], hitboxes.graph[1] + hitboxes.graph[3] - 10, hitboxes.graph[0] + hitboxes.graph[2], hitboxes.graph[1] + hitboxes.graph[3] + 10);
+        sketch.line(hitboxes.graph[0], hitboxes.graph[1] + hitboxes.graph[3] - 10, hitboxes.graph[0], hitboxes.graph[1] + hitboxes.graph[3] + 10);
         sketch.textAlign(sketch.CENTER, sketch.TOP);
         sketch.textSize(14);
         sketch.fill(settings.textColor);
         let xMax = lerp(selectedAxes[0], 1/controls.view.zoom - (((controls.view.x - hitboxes.graph[0])/controls.view.zoom + hitboxes.graph[0]))/hitboxes.graph[2]);
         let xMin = lerp(selectedAxes[0], -(((controls.view.x - hitboxes.graph[0])/controls.view.zoom + hitboxes.graph[0]))/hitboxes.graph[2]);
-        sketch.text(selectedAxes[0]==="time"?xMax:Math.round(xMax*100)/100, 590, 380);
-        sketch.text(selectedAxes[0]==="time"?xMin:Math.round(xMin*100)/100, 250, 380);
+        sketch.text(selectedAxes[0]==="time"?xMax:Math.round(xMax*100)/100, hitboxes.graph[0] + hitboxes.graph[2], hitboxes.graph[1] + hitboxes.graph[3]  + 15);
+        sketch.text(selectedAxes[0]==="time"?xMin:Math.round(xMin*100)/100, hitboxes.graph[0], hitboxes.graph[1] + hitboxes.graph[3]  + 15);
         
         // left line
-        sketch.line(240, 50, 260, 50);
-        sketch.line(240, 360, 260, 360);
+        sketch.line(hitboxes.graph[0] - 10, hitboxes.graph[1], hitboxes.graph[0] + 10, hitboxes.graph[1]);
+        sketch.line(hitboxes.graph[0] - 10, hitboxes.graph[1] + hitboxes.graph[3], hitboxes.graph[0] + 10, hitboxes.graph[1] + hitboxes.graph[3]);
         sketch.textAlign(sketch.RIGHT, sketch.CENTER);
         sketch.textSize(14);
         sketch.fill(settings.textColor);
         let yMax = lerp(selectedAxes[1], 1 - (-((controls.view.y - hitboxes.graph[1])/controls.view.zoom + hitboxes.graph[1])/hitboxes.graph[3]));
         let yMin = lerp(selectedAxes[1], 1 - (1/controls.view.zoom - (((controls.view.y - hitboxes.graph[1])/controls.view.zoom + hitboxes.graph[1]))/hitboxes.graph[3]));
-        sketch.text(selectedAxes[1]==="time"?yMax:Math.round(yMax*100)/100, 230, 50);
-        sketch.text(selectedAxes[1]==="time"?yMin:Math.round(yMin*100)/100, 230, 360);
+        sketch.text(selectedAxes[1]==="time"?yMax:Math.round(yMax*100)/100, hitboxes.graph[0] - 15, hitboxes.graph[1]);
+        sketch.text(selectedAxes[1]==="time"?yMin:Math.round(yMin*100)/100, hitboxes.graph[0] - 15, hitboxes.graph[1] + hitboxes.graph[3]);
         sketch.textSize(18);
         
         // Gridlines
         // sketch.stroke(settings.textColor + "60");
         // for(let i = 0; i <= 10; i++) {
-        //     sketch.line(...transform(250 + 34*i, 360), ...transform(250 + 34*i, 50));
-        //     sketch.line(...transform(250, 360 - 31*i), ...transform(590, 360 - 31*i));
+        //     sketch.line(...transform(hitboxes.graph[0] + (hitboxes.graph[2])*(i/10), hitboxes.graph[1] + hitboxes.graph[3]), ...transform(hitboxes.graph[0] + (hitboxes.graph[2])*(i/10), hitboxes.graph[1]));
+        //     sketch.line(...transform(hitboxes.graph[0], hitboxes.graph[1] + hitboxes.graph[3]*(i/10)), ...transform(hitboxes.graph[0] + hitboxes.graph[2], hitboxes.graph[1] + hitboxes.graph[3]*(i/10)));
         // }
 
         
@@ -471,25 +490,25 @@ let info = function( sketch ) {
             // Zero lines
             if (selectedAxes[0] !== "time") 
             {
-                let xZero = 250 +((0 - dataInfo[selectedAxes[0]].range[0])/(dataInfo[selectedAxes[0]].range[1] - dataInfo[selectedAxes[0]].range[0]))*(590-250);
+                let xZero =hitboxes.graph[0] +((0 - dataInfo[selectedAxes[0]].range[0])/(dataInfo[selectedAxes[0]].range[1] - dataInfo[selectedAxes[0]].range[0]))*hitboxes.graph[2];
                 let transformed = controls.view.x + (controls.view.zoom * xZero);
-                if (!(transformed <= 250 || transformed >= 590)) {
-                    sketch.line(transformed, 50, transformed, 370);
+                if (!(transformed <= hitboxes.graph[0] || transformed >= hitboxes.graph[0] + hitboxes.graph[2])) {
+                    sketch.line(transformed, hitboxes.graph[1], transformed, hitboxes.graph[1] + hitboxes.graph[3] + 10);
                     sketch.textSize(14);
                     sketch.fill(settings.textColor);
-                    sketch.text(0, transformed, 380);
+                    sketch.text(0, transformed, hitboxes.graph[1] + hitboxes.graph[3] + 15);
                     sketch.noFill();
                     sketch.textSize(18);
                 }
             }
             if (selectedAxes[1] !== "time") {
-                let yZero = 360 + ((0 - dataInfo[selectedAxes[1]].range[0])/(dataInfo[selectedAxes[1]].range[1] - dataInfo[selectedAxes[1]].range[0]))*(50-360);
+                let yZero = hitboxes.graph[1] + hitboxes.graph[3] + ((0 - dataInfo[selectedAxes[1]].range[0])/(dataInfo[selectedAxes[1]].range[1] - dataInfo[selectedAxes[1]].range[0]))*(-hitboxes.graph[3]);
                 let transformed = controls.view.y + (controls.view.zoom * yZero);
-                if (!(transformed <= 50 || transformed >= 360)) {
-                    sketch.line(240, transformed, 590, transformed);
+                if (!(transformed <= hitboxes.graph[1] || transformed >= hitboxes.graph[1] + hitboxes.graph[3])) {
+                    sketch.line(hitboxes.graph[0] - 10, transformed, hitboxes.graph[0] + hitboxes.graph[2], transformed);
                     sketch.textSize(14);
                     sketch.fill(settings.textColor);
-                    sketch.text(0, 230, transformed);
+                    sketch.text(0, hitboxes.graph[0] - 15, transformed);
                     sketch.noFill();
                     sketch.textSize(18);
                 }
@@ -504,7 +523,7 @@ let info = function( sketch ) {
 
         sketch.textAlign(sketch.CENTER, sketch.BOTTOM);
         sketch.rotate(-sketch.PI/2);
-        sketch.text(selected==="y_axis"?"Selecting...":dataInfo[selectedAxes[1]].label, -205, 240);
+        sketch.text(selected==="y_axis"?"Selecting...":dataInfo[selectedAxes[1]].label, -(hitboxes.graph[1] + hitboxes.graph[3]/2), hitboxes.graph[0] - 10);
 
     }
 
@@ -669,8 +688,8 @@ window.onrecieve = (data) => {
             watermark = true;
             return;
         }
-        if (data.data === "BAKER") {
-            document.getElementById('title').innerHTML = "Dawn Balloon Data - Baker Simmons";
+        if (data.data === "BAKERMILO") {
+            document.getElementById('title').innerHTML = "Dawn Balloon Data - Baker Simmons & Milo Sperry";
             dataInfo.time.range  = ["13:37:00:0", "22:35:00:0"]
             watermark = true;
             return;
@@ -683,7 +702,6 @@ window.onrecieve = (data) => {
         return;
     }
     if (data.data.includes(null) || data.data.includes(undefined)) return;
-    console.log(data.data[0]);
     DATA = data.data;
     if (settings.skipGPSFrames) {
         DATA = DATA.filter(d => d.live_cam == 1);
